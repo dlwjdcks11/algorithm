@@ -1,130 +1,292 @@
+// 2-2 BM algorithm
 #include <iostream>
-#include <stack>
 #include <vector>
-#include <list>
-#include <algorithm>
+#include <string>
 using namespace std;
 
-struct element { // ÀÎÁ¢ÇÑ Á¤Á¡ÀÇ Á¤º¸¿Í ÇĞ»ı ¹øÈ£ ÀúÀåÇÒ ±¸Á¶Ã¼ ¼±¾ğ
-	list<int> adj;
-	int index = -1;
-};
+int last[26]; // lastOccurrence í•¨ìˆ˜ì˜ ê²°ê³¼ê°’ ì €ì¥í•  ë°°ì—´. a~zë¥¼ 0~25ë²ˆ ì¸ë±ìŠ¤ì— ì €ì¥í•œë‹¤.
+int X = -1; // Xì˜ ë“±ì¥ ìœ„ì¹˜ëŠ” ë”°ë¡œ ë³€ìˆ˜ë¡œ ì €ì¥í•œë‹¤.
+vector<int> v; // íŒ¨í„´ì˜ ë“±ì¥ index ì €ì¥í•  ë²¡í„°
 
-vector<element> v; // ±âº»ÀûÀÎ ÀÔ·Â°ªÀ» ÀúÀå¹ŞÀ» element ±¸Á¶Ã¼ÀÇ vector¤¤
-vector<element> backtracking; // backtrackingÀ» À§ÇØ vÀÇ ¹İ´ë¹æÇâÀ¸·Î ÀúÀåµÉ vector
-vector<element> backtracking2; // ÃßÈÄ sort ¿¬»ê¿¡ »ç¿ëµÉ Á¤·ÄµÇÁö ¾ÊÀº backtracking vector
-bool visited[50001]; // ÃÖÃÊ DFS ½ÇÇà ½Ã ¹æ¹®ÇÑ ³ëµå Á¤º¸¸¦ ÀúÀåÇÒ ¹è¿­
-bool backVisited[50001]; // backtracking ½ÇÇà ½Ã ¹æ¹®ÇÒ ³ëµå Á¤º¸¸¦ ÀúÀåÇÒ ¹è¿­
-bool finished[50001]; // ÃÖÃÊ DFS ½ÇÇà ½Ã DFS°¡ Á¾·áµÈ ³ëµå¸¦ ÀúÀåÇÏ±â À§ÇÑ ¹è¿­
-bool backFinished[50001]; // backtracking ½ÇÇà ½Ã backtrackingÀÌ Á¾·áµÈ ³ëµå¸¦ ÀúÀåÇÏ±â À§ÇÑ ¹è¿­
-int sccLeader[50001]; // °¢ ÇĞ»ıÀÇ SCC leader¸¦ ÀúÀåÇÏ±â À§ÇÑ ¹è¿­
-stack<int> s; // Finishing stack¿ë stack
+void lastOccurrence(string find) { // lastOccurrence í•¨ìˆ˜
+	for (int i = 0; i < 26; i++)
+		last[i] = -1; // last ë°°ì—´ -1ë¡œ ì´ˆê¸°í™”
 
-bool cmp(element a, element b) { // backtracking vector Á¤·Ä¿ë ÇÔ¼ö
-	if (a.adj.size() != b.adj.size()) // aÀÇ list size(aÀÇ ÆÈ·Î¿ö)¿Í, bÀÇ list size(bÀÇ ÆÈ·Î¿ö)°¡ ´Ù¸£´Ù¸é,
-		return a.adj.size() > b.adj.size(); // ÆÈ·Î¿ö°¡ ¸¹Àº ¼øÀ¸·Î Á¤·Ä
-	return a.index < b.index; // °°´Ù¸é, ÇĞ»ı ¹øÈ£°¡ ÀÛÀº ¼øÀ¸·Î Á¤·Ä
+	for (int i = 0; i < find.length(); i++) { // findì˜ ëª¨ë“  ì•ŒíŒŒë²³ì„ ë°˜ë³µ
+		if (find[i] == 'X') { // Xê°€ ë“±ì¥í•  ë•Œ ë”°ë¡œ ì˜ˆì™¸ì²˜ë¦¬
+			X = i; // Xì˜ ë§ˆì§€ë§‰ ë“±ì¥ ì¸ë±ìŠ¤ ì €ì¥
+			continue; // ì´í•˜ êµ¬ë¬¸ ì‹¤í–‰ ì•ˆí•¨
+		}
+			
+		last[find[i] - 'a'] = i; // Xê°€ ì•„ë‹ ë•Œ, ë“±ì¥í•œ ì•ŒíŒŒë²³ì—ì„œ 'a'ë¥¼ ë¹¼ì„œ ì •ìˆ˜í™” í•œ ë‹¤ìŒ, ë§ˆì§€ë§‰ ë“±ì¥ ì¸ë±ìŠ¤ ì €ì¥
+	}
+		
+	return;
 }
 
-bool vcmp(const int& a, const int& b) { // v vectorÀÇ ³»ºÎ list Á¤·Ä¿ë ÇÔ¼ö
-	if (backtracking2[a - 1].adj.size() != backtracking2[b - 1].adj.size()) // backtracking2¸¦ ÂüÁ¶ÇÏ¿©, °¢ ÇĞ»ıÀÇ ÆÈ·Î¿ö ¼ö°¡ ´Ù¸£´Ù¸é,
-		return backtracking2[a - 1].adj.size() > backtracking2[b - 1].adj.size(); // ÆÈ·Î¿ö°¡ ¸¹Àº ¼øÀ¸·Î Á¤·Ä
-	return backtracking2[a - 1].index < backtracking2[b - 1].index; // °°´Ù¸é, ÇĞ»ı ¹øÈ£°¡ ÀÛÀº ¼øÀ¸·Î Á¤·Ä
-}
+void BM(string s, string find) {
+	int i = find.length() - 1;
+	int j = find.length() - 1; // i, jë¥¼ ì°¾ê³ ìí•˜ëŠ” ë¬¸ìì—´ì˜ ë§ˆì§€ë§‰ ì•ŒíŒŒë²³ìœ¼ë¡œ ì´ˆê¸°í™”
 
-void DFS(int cur) { // DFS ÇÔ¼ö, curÀº ½ÇÁ¦ ÇĞ»ı ¹øÈ£¿¡¼­ 1ÀÌ ÀÛ´Ù.
-	if (finished[cur + 1]) // cur + 1ÀÌ ÀÌ¹Ì Á¾·áµÈ ³ëµå¶ó¸é,
-		return; // ÇÔ¼ö Á¾·á
+	do {
+		if (s[i] == find[j] || find[j] == 'X') { // ë¹„êµí•˜ëŠ” ë¬¸ìê°€ ê°™ê±°ë‚˜, findì˜ ì•ŒíŒŒë²³ì´ X(ì•„ë¬´ ë¬¸ìë‚˜ ìƒê´€ì—†ìŒ) ì¼ ë•Œ
+			if (j == 0) { // ë§ˆì§€ë§‰ ì¸ë±ìŠ¤ê¹Œì§€ íƒìƒ‰ ì™„ë£Œ, ë¬¸ìì—´ ì°¾ìŒ
+				v.push_back(i); // ë“±ì¥ ì¸ë±ìŠ¤ ì €ì¥
 
-	visited[cur + 1] = true; // cur + 1 ¹æ¹®Çß´Ù°í ¾Ë¸²
+				i += find.length(); // íƒìƒ‰ì„ ê³„ì† ì§„í–‰í•´ì•¼ í•˜ë¯€ë¡œ ì²˜ìŒ íŒ¨í„´ì´ ë“±ì¥í•˜ê¸° ì‹œì‘í•œ ì¸ë±ìŠ¤ì˜ ë°”ë¡œ ë‹¤ìŒìœ¼ë¡œ ië¥¼ ì´ë™ì‹œí‚¤ê¸° ìœ„í•´ íŒ¨í„´ì„ ë”í•´ì¤€ë‹¤.
+				j = find.length() - 1; // ìµœì´ˆê°’ìœ¼ë¡œ ì´ˆê¸°í™”
 
-	if (v[cur].adj.empty()) { // cur¿¡¼­ ´õ ÀÌ»ó °¥ ¼ö ÀÖ´Â ³ëµå°¡ ¾ø´Ù¸é,
-		cout << cur + 1 << ' '; // stack¿¡ ³ÖÀ» °ÍÀÌ¹Ç·Î, Ãâ·Â
-		s.push(cur + 1); // finishing stack¿¡ »ğÀÔ
-		finished[cur + 1] = true; // cur + 1ÀÌ finishing stack¿¡ µé¾î°¬´Ù°í ¾Ë¸²
-		return;
-	}
+				cout << 1 << ' '; // findëŠ” 1ì¹¸ ì í”„í•œê²ƒê³¼ ë§ˆì°¬ê°€ì§€ì´ë¯€ë¡œ, 1 ì¶œë ¥
 
-	for (auto value : v[cur].adj) { // cur¹øÂ°ÀÇ node¿¡¼­ °¥ ¼ö ÀÖ´Â Á¤Á¡µéÀ» ¸ğµÎ È®ÀÎÇÑ´Ù.
-		if (!visited[value]) // ¾ÆÁ÷ ¹æ¹®ÇÏÁö ¾Ê¾Ò´Ù¸é, 
-			DFS(value - 1); // ½ÇÁ¦ ÇĞ»ı ¹øÈ£¿¡¼­ 1À» »« °ªÀ¸·Î DFS Àç±Í ½ÇÇà
-	}
+				continue; // ì´í•˜ êµ¬ë¬¸ ì‹¤í–‰ ì•ˆí•¨
+			}
 
-	// cur + 1ÀÌ ¾ÆÁ÷ finishing stack¿¡ ¾ø´Âµ¥, for¹®À» ¸ğµÎ ¼öÇàÇß´Ù¸é, ´õ ÀÌ»ó °¥ °÷ÀÌ ¾ø´Â °ÍÀÌ¹Ç·Î finish µÇ¾î¾ß ÇÑ´Ù.
-	if (!finished[cur + 1]) { 
-		cout << cur + 1 << ' '; // stack¿¡ ³ÖÀ» °ÍÀÌ¹Ç·Î, Ãâ·Â
-		finished[cur + 1] = true; // cur + 1ÀÌ finishing stack¿¡ µé¾î°¬´Ù°í ¾Ë¸²
-		s.push(cur + 1); // finishing stack¿¡ »ğÀÔ
-		return;
-	}
-}
+			i--;
+			j--; // ë‹¤ìŒ ë¬¸ìì—´ ë¹„êµë¥¼ ìœ„í•´ iì™€ jë¥¼ 1ì”© ê°ì†Œ
 
-void getLeader(int cur, int leader) { // SCCÀÇ leader¸¦ ±¸ÇÏ´Â ÇÔ¼ö, cur°ú leader¸¦ ¸Å°³º¯¼ö·Î ¹Ş¾Æ¼­, leader¸¦ SCCÀÇ leader·Î ÁöÁ¤ÇÑ´Ù.
-	if (backFinished[cur]) // curÀÌ ÀÌ¹Ì Á¾·áµÈ ³ëµå¶ó¸é,
-		return; // ÇÔ¼ö Á¾·á
+			continue;
+		}
+		
+		// ë¹„êµí•˜ëŠ” ë¬¸ìê°€ ë‹¤ë¥¼ ë•Œ
+		int l = last[s[i] - 'a'] > X ? last[s[i] - 'a'] : X; // Xì˜ ë§ˆì§€ë§‰ ë“±ì¥ ì¸ë±ìŠ¤ì™€ í˜„ì¬ iì— í•´ë‹¹í•˜ëŠ” ì•ŒíŒŒë²³ì˜ ë§ˆì§€ë§‰ ë“±ì¥ ì¸ë±ìŠ¤ë¥¼ ë¹„êµí•˜ì—¬ í° ê°’ì„ ì €ì¥í•œë‹¤.
+															 // XëŠ” ì–´ë–¤ ë¬¸ìì—´ê³¼ ë§¤ì¹˜ë˜ì–´ë„ ìƒê´€ì´ ì—†ìœ¼ë¯€ë¡œ, ë‘˜ ì¤‘ ë” í° ê°’ì„ ì°¾ì•„ì„œ ìµœëŒ€í•œ ë§ì€ ë¹„êµë¥¼ í•  ìˆ˜ ìˆë„ë¡ í•´ì•¼í•œë‹¤.
+		cout << j + 1 - (j < l + 1 ? j : l + 1) << ' '; // í…ìŠ¤íŠ¸ì—ì„œ ë“±ì¥í•œ ì•ŒíŒŒë²³ì´ findì— ì¡´ì¬í•œë‹¤ë©´ ê·¸ ì•ŒíŒŒë²³ì´ ë§ˆì§€ë§‰ìœ¼ë¡œ ì¡´ì¬í•˜ëŠ” findì˜ ì¸ë±ìŠ¤ì™€ ë§ì¶°ì•¼ í•˜ë¯€ë¡œ, ì´ë™í•˜ëŠ” ê¸¸ì´ëŠ” j + 1 - min(j, l + 1)ì´ ëœë‹¤.
 
-	backVisited[cur] = true; // cur ¹æ¹®Çß´Ù°í ¾Ë¸²
+		i += (find.length() - (j < l + 1 ? j : l + 1)); // íƒìƒ‰ì„ ê³„ì† ì§„í–‰í•´ì•¼ í•˜ë¯€ë¡œ, ië„ ìœ„ì™€ ë™ì¼í•˜ê²Œ ì´ë™ì„ í•´ì¤€ë‹¤.
+		j = find.length() - 1; // ìµœì´ˆê°’ìœ¼ë¡œ ì´ˆê¸°í™”
+	
+	} while (i < s.length()); // í•´ë‹¹ ë°˜ë³µë¬¸ì„ ë¬¸ìì—´ ëê¹Œì§€ ë°˜ë³µ
 
-	if (backtracking2[cur - 1].adj.empty()) { // backtracking2 vectorÀÇ cur - 1 ¹ø¤Š index¿¡¼­ ´õ ÀÌ»ó °¥ ¼ö ÀÖ´Â Á¤Á¡ÀÌ ¾ø´Ù¸é,
-		sccLeader[cur] = leader; // ÇĞ»ı¹øÈ£ cur¹øÀÇ leader ¼³Á¤
-		backFinished[cur] = true; // backtracking Á¾·áµÇ¾ú´Ù°í ¾Ë¸²
-		return; // ÇÔ¼ö Á¾·á
-	}
-
-	for (auto value : backtracking2[cur - 1].adj) { // backtracking2 vectorÀÇ cur - 1¹øÂ°ÀÇ node¿¡¼­ °¥ ¼ö ÀÖ´Â Á¤Á¡µé ¸ğµÎ È®ÀÎÇÑ´Ù.
-		if (!backVisited[value]) // ¾ÆÁ÷ ¹æ¹®ÇÏÁö ¾Ê¾Ò´Ù¸é,
-			getLeader(value, leader); // getLeader Àç±Í ½ÇÇà
-	}
-
-	// for¹®ÀÌ Á¾·áµÇ¾ú´Ù¸é, ´õ ÀÌ»ó °¥ Á¤Á¡ÀÌ ¾ø´Â °ÍÀÌ¹Ç·Î, finish µÇ¾î¾ß ÇÑ´Ù.
-	if (!backFinished[cur]) {
-		sccLeader[cur] = leader; // leader ¼³Á¤
-		backFinished[cur] = true; // cur¹øÂ° node°¡ finish µÇ¾ú´Ù°í ¾Ë¸²
-		return;
-	}
+	cout << '\n';
+	return;
 }
 
 int main() {
-	int n, m; // vertex, edge ¼ö ÀÔ·Â
-	cin >> n >> m;
+	ios::sync_with_stdio(false);
+	cin.tie(NULL);
+	cout.tie(NULL);
 
-	for (int i = 0; i < n; i++) { // º¤ÅÍµé ÃÊ±âÈ­, ÃÖÃÊÀÇ index´Â i·Î ÁöÁ¤ÇÏ¿© ÀÔ·ÂµÇÁö ¾Ê´Â edgeµµ °è»êÇÒ ¼ö ÀÖ°Ô ÇÑ´Ù.
-		element e;
-		e.index = i;
-		v.push_back(e);
-		backtracking.push_back(e);
-		backtracking2.push_back(e);
-	}
+	string s, find;
+	cin >> s >> find; // ì…ë ¥
 
-	for (int i = 0; i < m; i++) { // edge Á¤º¸ ÀÔ·Â
-		int src, dst;
-		cin >> src >> dst;
-		v[src - 1].adj.push_back(dst); // ¹è¿­ÀÇ index°¡ µÇ¾î¾ß ÇÏ¹Ç·Î src¿¡¼­ 1À» »©¼­ dst »ğÀÔ
-		v[src - 1].index = src - 1;
+	lastOccurrence(find);
+	BM(s, find); // ê°ê°ì˜ í•¨ìˆ˜ ì‹¤í–‰
 
-		backtracking[dst - 1].adj.push_back(src); // v¿Í ¹İ´ë¹æÇâÀ¸·Î »ğÀÔ
-		backtracking[dst - 1].index = dst - 1;
+	for (auto value : v) // indexê°€ ë‹´ê¸´ vectorë¥¼ ë°°ì—´ ê¸°ë°˜ forë¬¸ìœ¼ë¡œ í•˜ë‚˜ì”© ì¶œë ¥
+		cout << value << ' ';
 
-		backtracking2[dst - 1].adj.push_back(src); // backtracking°ú µ¿ÀÏÇÏ°Ô »ğÀÔ
-		backtracking2[dst - 1].index = dst - 1;
-	}
-
-	sort(backtracking.begin(), backtracking.end(), cmp); // cmp ÇÔ¼ö¸¦ ±âÁØÀ¸·Î backtracking vector Á¤·Ä
-
-	for (int i = 0; i < n; i++) 
-		v[i].adj.sort(vcmp); // vcmp ÇÔ¼ö¸¦ ±âÁØÀ¸·Î vÀÇ ³»ºÎ list °ª Á¤·Ä
-
-	for (int i = 0; i < n; i++)
-		DFS(backtracking[i].index); // Á¤·ÄµÈ backtracking vectorÀÇ ÇĞ»ı ¹øÈ£ ¼øÀ¸·Î DFS ½ÇÇà
-	cout << '\n';
-
-	for (int i = 0; i < n; i++) { // ¸¸µé¾îÁø finishing stackÀÇ topÀ» ±âÁØÀ¸·Î getLeader ½ÇÇà
-		getLeader(s.top(), s.top());
-		s.pop(); // ÇÑ ¹øÀÇ ½ÃÇà ÈÄ, pop()À¸·Î ¸Ç À§ ¿ä¼Ò Á¦°Å
-	}
-
-	for (int i = 1; i <= n; i++)
-		cout << sccLeader[i] << ' '; // °¢ sccÀÇ Leader Ãâ·Â
-		
 	return 0;
 }
+
+//--------------------------------------------------
+
+// 2-1 KMP algorithm
+//#include <iostream>
+//#include <vector>
+//#include <string>
+//using namespace std;
+//
+//int fail[10002]; // 0ìœ¼ë¡œ ì´ˆê¸°í™”ëœ failure ë°°ì—´ ìƒì„±, findì˜ ìµœëŒ€ê¸¸ì´ëŠ” 10000ì´ë¯€ë¡œ ë„‰ë„‰í•˜ê²Œ 10002ê°œ ìƒì„±
+//vector<int> v; // êµ¬ë¬¸ì„ ì°¾ì•˜ì„ ì‹œ êµ¬ë¬¸ì˜ ì‹œì‘ ì¸ë±ìŠ¤ ì €ì¥í•  vector ì„ ì–¸
+//
+//void failure(string find) { // failure í•¨ìˆ˜ ì‹œì‘
+//	int i = 1; 
+//	int j = 0; // ë°˜ë³µë˜ëŠ” ê¸¸ì´ë¥¼ ì°¾ì•„ì•¼ í•˜ë¯€ë¡œ jëŠ” 0ìœ¼ë¡œ, iëŠ” í•œ ì¹¸ ë’¤ë¡œ ì´ˆê¸°í™”
+//
+//	while (i < find.length()) { // findì˜ ê¸¸ì´ë§Œí¼ ë°˜ë³µ
+//		if (find[i] == find[j]) { // iì™€ jê°€ ê°™ë‹¤ë©´ (ì ‘ë‘ì™€ ì ‘ë¯¸ê°€ ê°™ë‹¤ë©´)
+//			fail[i] = j + 1; // ê³µí†µëœ ì ‘ë‘, ì ‘ë¯¸ì‚¬ì˜ ìµœëŒ€ê¸¸ì´ ì €ì¥
+//			i++; 
+//			j++; // i, j ëª¨ë‘ í•œ ì¹¸ ì´ë™
+//		}
+//		else if (j > 0) // iì™€ jê°€ ë‹¤ë¥´ê³ , jê°€ 0ë³´ë‹¤ í¬ë‹¤ë©´
+//			j = fail[j - 1]; // ë‹¤ì‹œ ìµœëŒ€ê¸¸ì´ ì°¾ì•„ì•¼ í•˜ë¯€ë¡œ fail[j - 1]ë¡œ jë¥¼ ì´ë™í•œë‹¤.
+//		else { // ê³µí†µëœ ì ‘ë‘, ì ‘ë¯¸ì‚¬ì˜ ìµœëŒ€ê¸¸ì´ê°€ ì•„ì˜ˆ ì—†ë‹¤ë©´
+//			fail[i] = 0; // ië²ˆì§¸ failure ë°°ì—´ì€ 0
+//			i++; // i ì´ë™
+//		}
+//	}
+// 
+//	return;
+//}
+//
+//void KMP(string s, string find) {
+//	int i = 0;
+//	int j = 0; // iì™€ jëŠ” ì²˜ìŒë¶€í„°ë¡œ ì´ˆê¸°í™”
+//
+//	while (i < s.length()) {
+//		if (s[i] == find[j]) { // ê°™ì€ ë¬¸ìë¥¼ ì°¾ì•˜ë‹¤ë©´,
+//			if (j == find.length() - 1) { // í˜„ì¬ jê°€ find ë¬¸ìì—´ ê¸¸ì´ë³´ë‹¤ 1ë³´ë‹¤ ì‘ë‹¤ë©´ (find ë¬¸ìì—´ ë§ˆì§€ë§‰ê¹Œì§€ ë¹„êµë¥¼ ëë§ˆì³¤ë‹¤ë©´)
+//				v.push_back(i - j); // ì°¾ê³ ì í•˜ëŠ” ë¬¸ìì—´ì˜ ì‹œì‘ ì¸ë±ìŠ¤ ì €ì¥
+//				
+//				i += 1 - fail[j]; // ì´ë¯¸ íƒìƒ‰ì´ ëë‚¬ìœ¼ë¯€ë¡œ, ìµœëŒ€ failure í•¨ìˆ˜ë¥¼ í™•ì¸í•˜ì—¬ i - fail[j]ë§Œí¼ i ì´ë™
+//				j = 0; // íƒìƒ‰ì´ ëë‚¬ìœ¼ë¯€ë¡œ, jëŠ” 0ìœ¼ë¡œ ì´ˆê¸°í™”
+//
+//				cout << find.length() - fail[j] << ' '; // ì´ë™í•œ ê¸¸ì´ ì¶œë ¥
+//				continue;
+//			}
+//				
+//			i++;
+//			j++; // ë§ˆì§€ë§‰ ì¸ë±ìŠ¤ê°€ ì•„ë‹ì‹œ í•œì¹¸ ë” ì´ë™
+//		}
+//		else if (j > 0) {
+//			cout << j - fail[j - 1] << ' '; // ì´ë™í•œ ë§Œí¼ ì¶œë ¥
+//			j = fail[j - 1]; // jì— ìƒˆë¡œìš´ ì¸ë±ìŠ¤ ëŒ€ì…. fail[j - 1]ë³´ë‹¤ ì‘ì€ ê°’ì€ ì´ë¯¸ failure í•¨ìˆ˜ì— ì˜í•´ í™•ì¸í•  í•„ìš”ê°€ ì—†ë‹¤.
+//		}
+//		else {
+//			cout << 1 << ' '; // 1ì¹¸ ì´ë™
+//			i++; // i ì¦ê°€
+//		}
+//	}
+//
+//	cout << '\n'; // ê°œí–‰ ì¶œë ¥
+//	return;
+//}
+//
+//int main() {
+//	ios::sync_with_stdio(false);
+//	cin.tie(NULL);
+//	cout.tie(NULL);
+//
+//	string s, find; 
+//	cin >> s >> find; // ì „ì²´ êµ¬ë¬¸ sì™€ ì°¾ì„ êµ¬ë¬¸ find ì…ë ¥
+//
+//	failure(find); // failure ë°°ì—´ êµ¬í•˜ê¸° ìœ„í•´ find ì…ë ¥
+//	KMP(s, find); // KMP ì•Œê³ ë¦¬ì¦˜ ì‹œì‘
+//
+//	for (auto value : v)
+//		cout << value << ' '; // ê° êµ¬ë¬¸ì˜ ì‹œì‘ ì¸ë±ìŠ¤ ì¶œë ¥
+//
+//	return 0;
+//}
+
+//#include <iostream>
+//#include <stack> 
+//#include <vector>
+//#include <list>
+//#include <algorithm>
+//using namespace std;
+//
+//struct element { // ì¸ì ‘í•œ ì •ì ì˜ ì •ë³´ì™€ í•™ìƒ ë²ˆí˜¸ ì €ì¥í•  êµ¬ì¡°ì²´ ì„ ì–¸
+//	list<int> adj;
+//	int index = -1;
+//};
+//
+//vector<element> v; // ê¸°ë³¸ì ì¸ ì…ë ¥ê°’ì„ ì €ì¥ë°›ì„ element êµ¬ì¡°ì²´ì˜ vectorã„´
+//vector<element> backtracking; // backtrackingì„ ìœ„í•´ vì˜ ë°˜ëŒ€ë°©í–¥ìœ¼ë¡œ ì €ì¥ë  vector
+//vector<element> backtracking2; // ì¶”í›„ sort ì—°ì‚°ì— ì‚¬ìš©ë  ì •ë ¬ë˜ì§€ ì•Šì€ backtracking vector
+//bool visited[50001]; // ìµœì´ˆ DFS ì‹¤í–‰ ì‹œ ë°©ë¬¸í•œ ë…¸ë“œ ì •ë³´ë¥¼ ì €ì¥í•  ë°°ì—´
+//bool backVisited[50001]; // backtracking ì‹¤í–‰ ì‹œ ë°©ë¬¸í•  ë…¸ë“œ ì •ë³´ë¥¼ ì €ì¥í•  ë°°ì—´
+//bool finished[50001]; // ìµœì´ˆ DFS ì‹¤í–‰ ì‹œ DFSê°€ ì¢…ë£Œëœ ë…¸ë“œë¥¼ ì €ì¥í•˜ê¸° ìœ„í•œ ë°°ì—´
+//bool backFinished[50001]; // backtracking ì‹¤í–‰ ì‹œ backtrackingì´ ì¢…ë£Œëœ ë…¸ë“œë¥¼ ì €ì¥í•˜ê¸° ìœ„í•œ ë°°ì—´
+//int sccLeader[50001]; // ê° í•™ìƒì˜ SCC leaderë¥¼ ì €ì¥í•˜ê¸° ìœ„í•œ ë°°ì—´
+//stack<int> s; // Finishing stackìš© stack
+//
+//bool cmp(element a, element b) { // backtracking vector ì •ë ¬ìš© í•¨ìˆ˜
+//	if (a.adj.size() != b.adj.size()) // aì˜ list size(aì˜ íŒ”ë¡œì›Œ)ì™€, bì˜ list size(bì˜ íŒ”ë¡œì›Œ)ê°€ ë‹¤ë¥´ë‹¤ë©´,
+//		return a.adj.size() > b.adj.size(); // íŒ”ë¡œì›Œê°€ ë§ì€ ìˆœìœ¼ë¡œ ì •ë ¬
+//	return a.index < b.index; // ê°™ë‹¤ë©´, í•™ìƒ ë²ˆí˜¸ê°€ ì‘ì€ ìˆœìœ¼ë¡œ ì •ë ¬
+//}
+//
+//bool vcmp(const int& a, const int& b) { // v vectorì˜ ë‚´ë¶€ list ì •ë ¬ìš© í•¨ìˆ˜
+//	if (backtracking2[a - 1].adj.size() != backtracking2[b - 1].adj.size()) // backtracking2ë¥¼ ì°¸ì¡°í•˜ì—¬, ê° í•™ìƒì˜ íŒ”ë¡œì›Œ ìˆ˜ê°€ ë‹¤ë¥´ë‹¤ë©´,
+//		return backtracking2[a - 1].adj.size() > backtracking2[b - 1].adj.size(); // íŒ”ë¡œì›Œê°€ ë§ì€ ìˆœìœ¼ë¡œ ì •ë ¬
+//	return backtracking2[a - 1].index < backtracking2[b - 1].index; // ê°™ë‹¤ë©´, í•™ìƒ ë²ˆí˜¸ê°€ ì‘ì€ ìˆœìœ¼ë¡œ ì •ë ¬
+//}
+//
+//void DFS(int cur) { // DFS í•¨ìˆ˜, curì€ ì‹¤ì œ í•™ìƒ ë²ˆí˜¸ì—ì„œ 1ì´ ì‘ë‹¤.
+//	if (finished[cur + 1]) // cur + 1ì´ ì´ë¯¸ ì¢…ë£Œëœ ë…¸ë“œë¼ë©´,
+//		return; // í•¨ìˆ˜ ì¢…ë£Œ
+//
+//	visited[cur + 1] = true; // cur + 1 ë°©ë¬¸í–ˆë‹¤ê³  ì•Œë¦¼
+//
+//	if (v[cur].adj.empty()) { // curì—ì„œ ë” ì´ìƒ ê°ˆ ìˆ˜ ìˆëŠ” ë…¸ë“œê°€ ì—†ë‹¤ë©´,
+//		cout << cur + 1 << ' '; // stackì— ë„£ì„ ê²ƒì´ë¯€ë¡œ, ì¶œë ¥
+//		s.push(cur + 1); // finishing stackì— ì‚½ì…
+//		finished[cur + 1] = true; // cur + 1ì´ finishing stackì— ë“¤ì–´ê°”ë‹¤ê³  ì•Œë¦¼
+//		return;
+//	}
+//
+//	for (auto value : v[cur].adj) { // curë²ˆì§¸ì˜ nodeì—ì„œ ê°ˆ ìˆ˜ ìˆëŠ” ì •ì ë“¤ì„ ëª¨ë‘ í™•ì¸í•œë‹¤.
+//		if (!visited[value]) // ì•„ì§ ë°©ë¬¸í•˜ì§€ ì•Šì•˜ë‹¤ë©´, 
+//			DFS(value - 1); // ì‹¤ì œ í•™ìƒ ë²ˆí˜¸ì—ì„œ 1ì„ ëº€ ê°’ìœ¼ë¡œ DFS ì¬ê·€ ì‹¤í–‰
+//	}
+//
+//	// cur + 1ì´ ì•„ì§ finishing stackì— ì—†ëŠ”ë°, forë¬¸ì„ ëª¨ë‘ ìˆ˜í–‰í–ˆë‹¤ë©´, ë” ì´ìƒ ê°ˆ ê³³ì´ ì—†ëŠ” ê²ƒì´ë¯€ë¡œ finish ë˜ì–´ì•¼ í•œë‹¤.
+//	if (!finished[cur + 1]) { 
+//		cout << cur + 1 << ' '; // stackì— ë„£ì„ ê²ƒì´ë¯€ë¡œ, ì¶œë ¥
+//		finished[cur + 1] = true; // cur + 1ì´ finishing stackì— ë“¤ì–´ê°”ë‹¤ê³  ì•Œë¦¼
+//		s.push(cur + 1); // finishing stackì— ì‚½ì…
+//		return;
+//	}
+//}
+//
+//void getLeader(int cur, int leader) { // SCCì˜ leaderë¥¼ êµ¬í•˜ëŠ” í•¨ìˆ˜, curê³¼ leaderë¥¼ ë§¤ê°œë³€ìˆ˜ë¡œ ë°›ì•„ì„œ, leaderë¥¼ SCCì˜ leaderë¡œ ì§€ì •í•œë‹¤.
+//	if (backFinished[cur]) // curì´ ì´ë¯¸ ì¢…ë£Œëœ ë…¸ë“œë¼ë©´,
+//		return; // í•¨ìˆ˜ ì¢…ë£Œ
+//
+//	backVisited[cur] = true; // cur ë°©ë¬¸í–ˆë‹¤ê³  ì•Œë¦¼
+//
+//	if (backtracking2[cur - 1].adj.empty()) { // backtracking2 vectorì˜ cur - 1 ë²ˆì¨° indexì—ì„œ ë” ì´ìƒ ê°ˆ ìˆ˜ ìˆëŠ” ì •ì ì´ ì—†ë‹¤ë©´,
+//		sccLeader[cur] = leader; // í•™ìƒë²ˆí˜¸ curë²ˆì˜ leader ì„¤ì •
+//		backFinished[cur] = true; // backtracking ì¢…ë£Œë˜ì—ˆë‹¤ê³  ì•Œë¦¼
+//		return; // í•¨ìˆ˜ ì¢…ë£Œ
+//	}
+//
+//	for (auto value : backtracking2[cur - 1].adj) { // backtracking2 vectorì˜ cur - 1ë²ˆì§¸ì˜ nodeì—ì„œ ê°ˆ ìˆ˜ ìˆëŠ” ì •ì ë“¤ ëª¨ë‘ í™•ì¸í•œë‹¤.
+//		if (!backVisited[value]) // ì•„ì§ ë°©ë¬¸í•˜ì§€ ì•Šì•˜ë‹¤ë©´,
+//			getLeader(value, leader); // getLeader ì¬ê·€ ì‹¤í–‰
+//	}
+//
+//	// forë¬¸ì´ ì¢…ë£Œë˜ì—ˆë‹¤ë©´, ë” ì´ìƒ ê°ˆ ì •ì ì´ ì—†ëŠ” ê²ƒì´ë¯€ë¡œ, finish ë˜ì–´ì•¼ í•œë‹¤.
+//	if (!backFinished[cur]) {
+//		sccLeader[cur] = leader; // leader ì„¤ì •
+//		backFinished[cur] = true; // curë²ˆì§¸ nodeê°€ finish ë˜ì—ˆë‹¤ê³  ì•Œë¦¼
+//		return;
+//	}
+//}
+//
+//int main() {
+//	int n, m; // vertex, edge ìˆ˜ ì…ë ¥
+//	cin >> n >> m;
+//
+//	for (int i = 0; i < n; i++) { // ë²¡í„°ë“¤ ì´ˆê¸°í™”, ìµœì´ˆì˜ indexëŠ” ië¡œ ì§€ì •í•˜ì—¬ ì…ë ¥ë˜ì§€ ì•ŠëŠ” edgeë„ ê³„ì‚°í•  ìˆ˜ ìˆê²Œ í•œë‹¤.
+//		element e;
+//		e.index = i;
+//		v.push_back(e);
+//		backtracking.push_back(e);
+//		backtracking2.push_back(e);
+//	}
+//
+//	for (int i = 0; i < m; i++) { // edge ì •ë³´ ì…ë ¥
+//		int src, dst;
+//		cin >> src >> dst;
+//		v[src - 1].adj.push_back(dst); // ë°°ì—´ì˜ indexê°€ ë˜ì–´ì•¼ í•˜ë¯€ë¡œ srcì—ì„œ 1ì„ ë¹¼ì„œ dst ì‚½ì…
+//		v[src - 1].index = src - 1;
+//
+//		backtracking[dst - 1].adj.push_back(src); // vì™€ ë°˜ëŒ€ë°©í–¥ìœ¼ë¡œ ì‚½ì…
+//		backtracking[dst - 1].index = dst - 1;
+//
+//		backtracking2[dst - 1].adj.push_back(src); // backtrackingê³¼ ë™ì¼í•˜ê²Œ ì‚½ì…
+//		backtracking2[dst - 1].index = dst - 1;
+//	}
+//
+//	sort(backtracking.begin(), backtracking.end(), cmp); // cmp í•¨ìˆ˜ë¥¼ ê¸°ì¤€ìœ¼ë¡œ backtracking vector ì •ë ¬
+//
+//	for (int i = 0; i < n; i++) 
+//		v[i].adj.sort(vcmp); // vcmp í•¨ìˆ˜ë¥¼ ê¸°ì¤€ìœ¼ë¡œ vì˜ ë‚´ë¶€ list ê°’ ì •ë ¬
+//
+//	for (int i = 0; i < n; i++)
+//		DFS(backtracking[i].index); // ì •ë ¬ëœ backtracking vectorì˜ í•™ìƒ ë²ˆí˜¸ ìˆœìœ¼ë¡œ DFS ì‹¤í–‰
+//	cout << '\n';
+//
+//	for (int i = 0; i < n; i++) { // ë§Œë“¤ì–´ì§„ finishing stackì˜ topì„ ê¸°ì¤€ìœ¼ë¡œ getLeader ì‹¤í–‰
+//		getLeader(s.top(), s.top());
+//		s.pop(); // í•œ ë²ˆì˜ ì‹œí–‰ í›„, pop()ìœ¼ë¡œ ë§¨ ìœ„ ìš”ì†Œ ì œê±°
+//	}
+//
+//	for (int i = 1; i <= n; i++)
+//		cout << sccLeader[i] << ' '; // ê° sccì˜ Leader ì¶œë ¥
+//		
+//	return 0;
+//}
